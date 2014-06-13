@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require 'shellwords'
+require 'bundler/setup'
+
+require_relative './surface'
+
+json = JSON.parse(`curl -s #{ARGV[0].shellescape}`)
+
+tracks = json.map {|t| Track.new(t)}
+
+lines = []
+polys = []
+
+tracks.each do |track|
+  track, line, polygon = Surface.new(track).compute
+
+  lines << track if track
+  polys << polygon if polygon
+end
+
+geojson = { type: 'FeatureCollection',
+            features: lines.concat(polys) }.as_json
+
+output_file = ARGV[1] || 'coverage.geojson'
+
+File.open(output_file, 'wb') do |file|
+  file.write(geojson.to_json)
+end
